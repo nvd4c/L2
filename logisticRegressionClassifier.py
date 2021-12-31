@@ -1,73 +1,33 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import style
-
 style.use('ggplot')
 
-class LogisticRegression(object):    
-    """LogisticRegression 
-    
-    Parameters
-    ------------
-    learningRate : float, optional
-        Constant by which updates are multiplied (falls between 0 and 1). Defaults to 0.01.
-     
-    numIterations : int, optional
-        Number of passes (or epochs) over the training data. Defaults to 10.
-    
-    penalty : None or 'L2'
-        Option to perform L2 regularization. Defaults to None.
-    
-    Attributes
-    ------------
-    weights : 1d-array, shape = [1, 1 + n_features]
-        Weights after training phase
-        
-    iterationsPerformed : int
-        Number of iterations of gradient descent performed prior to hitting tolerance level
-        
-    costs : list, length = numIterations
-        Value of the log-likelihood cost function for each iteration of gradient descent
-        
-    References
-    ------------
-    https://en.wikipedia.org/wiki/Logistic_regression
-    https://en.wikipedia.org/wiki/Regularization_(mathematics)
-    
-    """
-    
+class LogisticRegression(object):
+    #weights : 1d-array, shape = [1, 1 + n_features], 1x3 Weights after training
     def __init__(self, learningRate, numIterations = 10, penalty = 'L2', C = 0.01):
-        
-        self.learningRate = learningRate
+        self.learningRate = learningRate          #default 0.01.
         self.numIterations = numIterations
         self.penalty = penalty
         self.C = C
-        
+
     def train(self, X_train, y_train, tol = 10 ** -4):
-        """Fit weights to the training data
-        
+        """
         Parameters
         -----------
         X_train : {array-like}, shape = [n_samples, n_features]
-            Training data to be fitted, where n_samples is the number of 
-            samples and n_features is the number of features. 
-            
-        y_train : array-like, shape = [n_samples,], values = 1|0
-            Labels (target values). 
-
+        y_train : array-like, shape = [n_samples], values = 1|0, Labels (target values).
         tol : float, optional
-            Value indicating the weight change between epochs in which
-            gradient descent should terminated. Defaults to 10 ** -4
-
+            Giá trị cho biết sự thay đổi giữa các epochs. Mặc định là 10 ** -4
         Returns:
         -----------
         self : object
-        
+
         """
-        tolerance = tol * np.ones([1, np.shape(X_train)[1] + 1])
-        self.weights = np.zeros(np.shape(X_train)[1] + 1) 
-        X_train = np.c_[np.ones([np.shape(X_train)[0], 1]), X_train]
-        self.costs = []
+        tolerance = tol * np.ones([1, np.shape(X_train)[1] + 1]) #1x3
+        self.weights = np.zeros(np.shape(X_train)[1] + 1)  #3x1
+        X_train = np.c_[np.ones([np.shape(X_train)[0], 1]), X_train] #X_train cũ:489x2 chuyển thành 489x3, cột ones ở đầu
+        self.costs = []                  #Giá trị của hàm chi phí cho mỗi lần lặp lại giảm dần độ dốc
 
         for i in range(self.numIterations):
             
@@ -79,10 +39,13 @@ class LogisticRegression(object):
                 delta_w = self.learningRate * np.dot(errors, X_train)
                 
             self.iterationsPerformed = i
+            #so lan lap lai cua giam doc duoc thuc hien truoc khi dat den tolerance level
 
-            if np.all(abs(delta_w) >= tolerance): 
+            if np.all(abs(delta_w) >= tolerance):
+
                 #weight update
-                self.weights += delta_w                                
+                self.weights += delta_w
+
                 #Costs
                 if self.penalty is not None:
                     self.costs.append(reg_logLiklihood(X_train, self.weights, y_train, self.C))
@@ -94,56 +57,17 @@ class LogisticRegression(object):
         return self
                     
     def predict(self, X_test, pi = 0.5):
-        """predict class label 
-        
-        Parameters
-        ------------
-        X_test : {array-like}, shape = [n_samples, n_features]
-            Testing data, where n_samples is the number of samples
-            and n_features is the number of features. n_features must
-            be equal to the number of features in X_train.
-            
-        pi : float, cut-off probability, optional
-            Probability threshold for predicting positive class. Defaults to 0.5.
-        
-        Returns
-        ------------
-        predictions : list, shape = [n_samples,], values = 1|0
-            Class label predictions based on the weights fitted following 
-            training phase.
-        
-        probs : list, shape = [n_samples,]
-            Probability that the predicted class label is a member of the 
-            positive class (falls between 0 and 1).
-        
-        """        
+        """
+        pi : float, probability, optional
+            Ngưỡng xác suất để dự đoán positive class. Mặc định là 0,5.
+        """
         z = self.weights[0] + np.dot(X_test, self.weights[1:])        
         probs = np.array([logistic_func(i) for i in z])
         predictions = np.where(probs >= pi, 1, 0)
-       
         return predictions, probs
         
     def performanceEval(self, predictions, y_test):
-        """Computer binary classification performance metrics
-        
-        Parameters
-        -----------
-        predictions : list, shape = [n_samples,], values = 1|0
-            Class label predictions based on the weights fitted following 
-            training phase. 
-        
-        y_test : list, shape = [n_samples,], values = 1|0
-            True class labels
-        
-        Returns
-        -----------
-        performance : dict
-            Accuracy, sensitivity (recall), specificity, postitive predictive 
-            value (PPV, precision), negative predictive value (NPV), false 
-            negative rate (FNR, "miss rate"), false positive rate (FPR, "fall out")
 
-        """        
-        #Initialize
         TP, TN, FP, FN, P, N = 0, 0, 0, 0, 0, 0
         
         for idx, test_sample in enumerate(y_test):
@@ -162,38 +86,19 @@ class LogisticRegression(object):
                 N += 1
             
         accuracy = (TP + TN) / (P + N)                
-        sensitivity = TP / P        
-        specificity = TN / N        
-        PPV = TP / (TP + FP)        
-        NPV = TN / (TN + FN)        
-        FNR = 1 - sensitivity        
-        FPR = 1 - specificity
-        
-        performance = {'Accuracy': accuracy, 'Sensitivity(recall)': sensitivity,
-                       'Specificity': specificity, 'Precision': PPV,
-                       'NPV(negative predictive value)': NPV, 'FNR(false negative rate)': FNR, 'FPR(false positive rate)': FPR}
+        sensitivity = TP / P      #recall
+        PPV = TP / (TP + FP)      #precision
+        F1 = (2*PPV*sensitivity)/(PPV+sensitivity)
+
+        performance = {'Accuracy': accuracy,
+                       'Recall': sensitivity,
+                       'F1-score': F1,
+                       'Precision': PPV}
       
         return performance
         
     def predictionPlot(self, X_test, y_test):
-        """Plot of test samples mapped onto the logistic function (sigmoidal
-        curve) according to the fitted weights. 
-        
-        Parameters
-        -----------
-        X_test : {array-like}, shape = [n_samples, n_features]
-            Testing data, where n_samples is the number of samples
-            and n_features is the number of features. n_features must
-            be equal to the number of features in X_train.
-        
-        y_test : list, shape = [n_samples,], values = 1|0
-            True class labels
-        
-        Returns
-        -----------       
-        matploblib figure
-        
-        """
+        #plot của các mẫu test được ánh xạ lên hàm logistic.
         zs = self.weights[0] + np.dot(X_test, self.weights[1:])        
         probs = np.array([logistic_func(i) for i in zs])
         
@@ -202,9 +107,7 @@ class LogisticRegression(object):
         colors = ['r','b']
         probs = np.array(probs)
         for idx,cl in enumerate(np.unique(y_test)):
-            plt.scatter(x = zs[np.where(y_test == cl)[0]], y = probs[np.where(y_test == cl)[0]],
-                    alpha = 0.8, c = colors[idx],
-                    marker = 'o', label = cl, s = 30)
+            plt.scatter(x = zs[np.where(y_test == cl)[0]], y = probs[np.where(y_test == cl)[0]], alpha = 0.8, c = colors[idx], marker = 'o', label = cl, s = 30)
 
         plt.xlabel('z')
         plt.ylim([-0.1, 1.1])
@@ -216,128 +119,63 @@ class LogisticRegression(object):
         plt.title('Logistic Regression Prediction Curve')
         plt.show()
         
-    def plotCost(self):
-        """Plot value of log-liklihood cost function for each epoch
-                
-        Returns
-        --------
-        matplotlib figure       
-        
-        """        
-        plt.figure()
-        plt.plot(np.arange(1, self.iterationsPerformed + 1), self.costs, marker = '.')
-        plt.xlabel('Iterations')
-        plt.ylabel('Log-Liklihood J(w)')
-                
+
+
     def plotDecisionRegions(self, X_test, y_test, pi = 0.5, res = 0.01):
-        """Visualize decision boundaries of trained logistic regression
-        classifier. Note, this method can only be used when training classifier
-        with 2 features.
-        
-        Parameters
-        -----------
-        X_test : {array-like}, shape = [n_samples, n_features]
-            Testing data, where n_samples is the number of samples
-            and n_features is the number of features. n_features must
-            be equal to the number of features in X_train.
+        """
+        Trực quan hóa ranh giới quyết định của bộ phân loại hồi quy logistic được train.
 
-        y_test : list, shape = [n_samples,], values = 1|0
-            True class labels
-            
-        pi : float, cut-off probability, optional
-            Probability threshold for predicting positive class. Defaults to 0.5.
-            
-        res : float
-            Resolution of contour grid
+        pi : float, cut-off probability, optional, Ngưỡng xác suất để dự đoán positive class. Mặc định là 0,5.
 
-        Returns
-        -----------
-        matplotlib figure        
-        
-        """        
+        res : float, Resolution của contour grid
+
+        """
         x = np.arange(min(X_test[:,0]) - 1, max(X_test[:,0]) + 1, 0.01)
-        y = np.arange(min(X_test[:,1]) - 1, max(X_test[:,1]) + 1, 0.01)        
+        y = np.arange(min(X_test[:,1]) - 1, max(X_test[:,1]) + 1, 0.01)
         xx, yy = np.meshgrid(x, y, indexing = 'xy')
-        
+
         data_points = np.transpose([xx.ravel(), yy.ravel()])
         preds, probs = self.predict(data_points, pi)
-            
-        colors = ['r','b']        
+
+        colors = ['r','b']
         probs = np.array(probs)
-                
+
         for idx,cl in enumerate(np.unique(y_test)):
             plt.scatter(x = X_test[:,0][np.where(y_test == cl)[0]], y = X_test[:,1][np.where(y_test == cl)[0]],
                     alpha = 0.8, c = colors[idx],
                     marker = 'o', label = cl, s = 30)
-                    
+
         preds = preds.reshape(xx.shape)
         plt.contourf(xx, yy, preds, alpha = 0.3)
         plt.legend(loc = 'best')
         plt.xlabel('$x_1$', size = 'x-large')
         plt.ylabel('$x_2$', size = 'x-large')
 
-def logistic_func(z):   
-    """Logistic (sigmoid) function, inverse of logit function
-    
-    Parameters:
-    ------------
-    z : float
-        linear combinations of weights and sample features
-        z = w_0 + w_1*x_1 + ... + w_n*x_n
-    
-    Returns:
-    ---------
-    Value of logistic function at z
-    
-    """
+
+def logistic_func(z):
     return 1 / (1 + np.exp(-z))  
     
 def logLiklihood(z, y):
-    """Log-liklihood function (cost function to be minimized in logistic
-    regression classification)
-    
-    Parameters
-    -----------
-    z : float
-        linear combinations of weights and sample features
-        z = w_0 + w_1*x_1 + ... + w_n*x_n
-        
-    y : list, values = 1|0
-        target values
-    
-    Returns
-    -----------
-    Value of log-liklihood function with parameter z and target value y
-    """
     return -1 * np.sum((y * np.log(logistic_func(z))) + ((1 - y) * np.log(1 - logistic_func(z))))
     
 def reg_logLiklihood(x, weights, y, C):
-    """Regularizd log-liklihood function (cost function to minimized in logistic
-    regression classification with L2 regularization)
-    
+    """
+
     Parameters
     -----------
     x : {array-like}, shape = [n_samples, n_features + 1]
-        feature vectors. Note, first column of x must be
-        a vector of ones.
-    
+        Note, first column of x must be a vector of ones.
+
     weights : 1d-array, shape = [1, 1 + n_features]
-        Coefficients that weight each samples feature vector
-        
-    y : list, shape = [n_samples,], values = 1|0
-        target values
-        
+
     C : float
-        Regularization parameter. C is equal to 1/lambda    
-    
-    Returns
-    -----------
-    Value of regularized log-liklihood function with the given feature values,
-    weights, target values, and regularization parameter
-     
+        Regularization parameter. C = 1/lambda
+
     """
-    z = np.dot(x, weights) 
+    z = np.dot(x, weights)
+
+    #L1:
+    #reg_term = 1 / 2 * math.sqrt(np.dot(weights.T, weights))
     reg_term = 1 / 2 * np.dot(weights.T, weights)
-    
     return C * (-1 * np.sum((y * np.log(logistic_func(z))) + ((1 - y) * np.log(1 - logistic_func(z))))) + reg_term
 
